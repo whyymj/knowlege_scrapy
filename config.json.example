@@ -1,0 +1,85 @@
+{
+  "database": {
+    "host": "localhost",
+    "port": 3306,
+    "db": "scrapy_db",
+    "user": "root",
+    "password": "",
+    "charset": "utf8mb4"
+  },
+  "backend": {
+    "host": "0.0.0.0",
+    "port": 5000,
+    "debug": false,
+    "cors_enabled": true
+  },
+  "frontend": {
+    "port": 3000,
+    "api_proxy": "http://localhost:5000"
+  },
+  "scrapy": {
+    "download_delay": 1,
+    "concurrent_requests": 16,
+    "obey_robots_txt": false,
+    "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+    "httpcache_enabled": true,
+    "httpcache_expiration_secs": 3600
+  },
+  "docker": {
+    "mysql": {
+      "root_password": "root123456",
+      "user": "scrapy_user",
+      "password": "scrapy_pass",
+      "port": 3306
+    },
+    "backend_port": 5000,
+    "frontend_port": 3000
+  },
+  "logging": {
+    "level": "INFO",
+    "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  },
+  "crawlers": {
+    "proxy_pool": {
+      "enabled": false,
+      "proxies": []
+    },
+    "deduplication": {
+      "enabled": true,
+      "method": "url",
+      "storage": "memory",
+      "redis_host": "localhost",
+      "redis_port": 6379,
+      "redis_db": 0
+    },
+    "user_agents": [
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+    ],
+    "ai_arxiv": {
+      "enabled": true,
+      "frequency": "6h",
+      "base_url": "https://arxiv.org/list/cs.AI/recent",
+      "anti_crawl": {
+        "user_agent_rotation": true,
+        "request_delay": 2.0,
+        "random_delay": true,
+        "retry_times": 3,
+        "timeout": 30,
+        "use_proxy": false
+      }
+    },
+    "stock_yahoo_finance": {
+      "enabled": true,
+      "frequency": "5m",
+      "base_url": "https://finance.yahoo.com",
+      "anti_crawl": {
+        "user_agent_rotation": true,
+        "request_delay": 1.0,
+        "random_delay": true,
+        "retry_times": 3,
+        "timeout": 30,
+        "use_proxy": false
+      }
+    }
+  }
+}
