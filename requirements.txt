@@ -5,4 +5,28 @@ beautifulsoup4==4.12.2
 lxml==4.9.3
 requests==2.31.0
 redis==5.0.1
-urllib3==2.0.7
+# urllib3 版本需要兼容 qdrant-client (需要 <2.0.0) 和 requests (需要 >=1.21.1,<3)
+urllib3>=1.26.14,<2.0.0
+jieba==0.42.1
+aiohttp==3.9.1
+brotli>=1.0.0  # 支持 Brotli 压缩解码
+# 时序数据库（可选）
+influxdb==5.3.1
+psycopg2-binary==2.9.9
+# 向量数据库（可选）
+qdrant-client==1.7.0
+pinecone-client==2.2.4
+# 文档数据库（可选）
+pymongo==4.6.1
+elasticsearch==8.11.0
+# 向量计算（更新版本以支持 Python 3.12）
+numpy>=1.26.0
+# LangChain AI推荐（更新版本以兼容 Python 3.12 和 pydantic）
+langchain>=0.1.0
+langchain-openai>=0.1.0
+langchain-community>=0.0.20
+openai>=1.3.0
+pydantic>=2.5.0
+# 翻译功能
+langdetect>=1.0.9
+googletrans==4.0.0rc1

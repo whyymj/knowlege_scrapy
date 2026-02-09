@@ -67,7 +67,7 @@ ITEM_PIPELINES = {
 
 # MySQL 数据库配置（从 config.json 读取，环境变量优先）
 MYSQL_HOST = os.getenv('MYSQL_HOST', _database_config.get('host', 'localhost'))
-MYSQL_PORT = int(os.getenv('MYSQL_PORT', _database_config.get('port', 3306)))
+MYSQL_PORT = int(os.getenv('MYSQL_PORT', _database_config.get('port', 3308)))
 MYSQL_DB = os.getenv('MYSQL_DB', _database_config.get('db', 'scrapy_db'))
 MYSQL_USER = os.getenv('MYSQL_USER', _database_config.get('user', 'root'))
 MYSQL_PASSWORD = os.getenv('MYSQL_PASSWORD', _database_config.get('password', ''))

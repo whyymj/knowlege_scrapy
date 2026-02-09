@@ -1,7 +1,7 @@
 {
   "database": {
     "host": "localhost",
-    "port": 3306,
+    "port": 3308,
     "db": "scrapy_db",
     "user": "root",
     "password": "",
@@ -9,13 +9,13 @@
   },
   "backend": {
     "host": "0.0.0.0",
-    "port": 5000,
+    "port": 6000,
     "debug": false,
     "cors_enabled": true
   },
   "frontend": {
     "port": 3000,
-    "api_proxy": "http://localhost:5000"
+    "api_proxy": "http://localhost:6000"
   },
   "scrapy": {
     "download_delay": 1,
@@ -30,9 +30,9 @@
       "root_password": "root123456",
       "user": "scrapy_user",
       "password": "scrapy_pass",
-      "port": 3306
+      "port": 3308
     },
-    "backend_port": 5000,
+    "backend_port": 6000,
     "frontend_port": 3000
   },
   "logging": {
@@ -80,6 +80,58 @@
         "timeout": 30,
         "use_proxy": false
       }
+    }
+  },
+  "pipeline": {
+    "quality_monitor": {
+      "min_title_length": 5,
+      "max_title_length": 500,
+      "min_content_length": 50,
+      "max_content_length": 1000000,
+      "max_age_days": 365
+    },
+    "normalizer": {
+      "enable_sentiment": true,
+      "enable_entity_extraction": true
+    }
+  },
+  "analyzer": {
+    "deepseek": {
+      "api_key": "",
+      "api_url": "https://api.deepseek.com/v1/chat/completions",
+      "model": "deepseek-chat",
+      "timeout": 30,
+      "max_retries": 3,
+      "cache_enabled": true,
+      "cache_ttl_hours": 24,
+      "batch_size": 5,
+      "batch_delay": 1.0
+    }
+  },
+  "storage": {
+    "mysql": {
+      "enabled": true,
+      "host": "localhost",
+      "port": 3308,
+      "database": "scrapy_db",
+      "user": "root",
+      "password": ""
+    },
+    "influxdb": {
+      "enabled": false,
+      "host": "localhost",
+      "port": 8086,
+      "database": "scrapy_ts",
+      "username": "",
+      "password": ""
+    },
+    "redis": {
+      "enabled": true,
+      "host": "localhost",
+      "port": 6379,
+      "db": 0,
+      "password": "",
+      "default_ttl": 3600
     }
   }
 }

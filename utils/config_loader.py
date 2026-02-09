@@ -100,10 +100,22 @@ class ConfigLoader:
         """获取 Docker 配置"""
         return self._config.get('docker', {})
     
+    def get_engine_config(self) -> Dict[str, Any]:
+        """获取引擎配置"""
+        return self._config.get('engine', {})
+    
     def reload(self):
         """重新加载配置"""
         self._config = None
         self._load_config()
+    
+    def __getitem__(self, key: str) -> Any:
+        """支持字典式访问"""
+        return self._config.get(key)
+    
+    def get(self, key: str, default: Any = None) -> Any:
+        """获取配置值"""
+        return self._config.get(key, default)
 
 
 # 全局配置实例

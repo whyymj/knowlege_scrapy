@@ -54,6 +54,21 @@ stop_port() {
     print_info "$name 已停止"
 }
 
+# 停止 MySQL Docker 容器
+stop_mysql_container() {
+    MYSQL_CONTAINER_NAME="scrapy_mysql_local"
+    
+    if docker ps --format '{{.Names}}' | grep -q "^${MYSQL_CONTAINER_NAME}$"; then
+        print_info "停止 MySQL 容器: ${MYSQL_CONTAINER_NAME}"
+        docker stop ${MYSQL_CONTAINER_NAME}
+        print_info "MySQL 容器已停止（容器保留，下次启动会自动启动）"
+    elif docker ps -a --format '{{.Names}}' | grep -q "^${MYSQL_CONTAINER_NAME}$"; then
+        print_info "MySQL 容器已停止"
+    else
+        print_info "MySQL 容器不存在"
+    fi
+}
+
 # 主函数
 main() {
     print_info "=========================================="
@@ -61,11 +76,24 @@ main() {
     print_info "=========================================="
     echo ""
     
-    # 停止后端服务
-    stop_port 5000 "后端服务"
+    # 停止后端服务（从配置文件读取端口）
+    BACKEND_PORT=6000
+    if [ -f "config.json" ] && command -v python3 &> /dev/null; then
+        BACKEND_PORT=$(python3 -c "import json; f=open('config.json'); d=json.load(f); print(d.get('backend', {}).get('port', 6000))" 2>/dev/null || echo "6000")
+    fi
+    stop_port $BACKEND_PORT "后端服务"
     
     # 停止前端服务
     stop_port 3000 "前端服务"
+    
+    # 询问是否停止 MySQL 容器
+    echo ""
+    read -p "是否停止 MySQL Docker 容器？(y/N): " stop_mysql
+    if [[ $stop_mysql == [yY] || $stop_mysql == [yY][eE][sS] ]]; then
+        stop_mysql_container
+    else
+        print_info "MySQL 容器保持运行"
+    fi
     
     echo ""
     print_info "所有服务已停止"

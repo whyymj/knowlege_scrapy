@@ -1,18 +1,26 @@
 FROM node:18-alpine as builder
 
+# 安装 pnpm
+RUN npm install -g pnpm --registry=https://registry.npmmirror.com
+
 WORKDIR /app
+
+# 配置 pnpm 使用国内镜像源
+RUN pnpm config set registry https://registry.npmmirror.com
 
 # 复制 package 文件
 COPY package*.json ./
+COPY .npmrc ./
+COPY .pnpmrc ./
 
 # 安装依赖
-RUN npm install
+RUN pnpm install
 
 # 复制源代码
 COPY . .
 
 # 构建应用
-RUN npm run build
+RUN pnpm run build
 
 # 生产环境镜像
 FROM nginx:alpine

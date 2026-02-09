@@ -12,8 +12,19 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
 try:
-    from .config import CrawlerConfig
-    from .utils import ProxyPool, DeduplicationManager
+from .config import CrawlerConfig
+from .utils import ProxyPool, DeduplicationManager
+
+# 导入数据处理管道
+try:
+    import sys
+    import os
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+    from pipeline import DataProcessor
+    PIPELINE_AVAILABLE = True
+except ImportError:
+    PIPELINE_AVAILABLE = False
+    DataProcessor = None
 except ImportError:
     # 处理相对导入问题
     import sys
@@ -46,6 +57,13 @@ class BaseCrawler(ABC):
         # 初始化去重管理器
         dedup_config = self.config.get_deduplication_config()
         self.dedup_manager = DeduplicationManager(dedup_config) if dedup_config.get('enabled') else None
+        
+        # 初始化数据处理管道
+        if PIPELINE_AVAILABLE:
+            pipeline_config = self.config._config.get('pipeline', {}).get('quality_monitor', {})
+            self.data_processor = DataProcessor(pipeline_config)
+        else:
+            self.data_processor = None
         
         # 初始化请求会话
         self.session = self._create_session()
@@ -244,6 +262,26 @@ class BaseCrawler(ABC):
             # 去重
             if self.dedup_manager:
                 items = [item for item in items if not self._is_duplicate(item)]
+            
+            # 数据处理管道
+            if self.data_processor:
+                self.log_info('进行数据标准化和质量检查...')
+                processed_items = []
+                for item in items:
+                    try:
+                        processed_item, quality_report = self.data_processor.process(item, check_quality=True)
+                        
+                        # 如果质量检查未通过，记录警告
+                        if not processed_item.get('quality_passed', True):
+                            self.log_warning(f'数据质量未通过: {item.get("url", "unknown")}, 分数: {processed_item.get("quality_score", 0):.1f}')
+                        
+                        processed_items.append(processed_item)
+                    except Exception as e:
+                        self.log_error(f'数据处理失败: {str(e)}')
+                        # 如果处理失败，使用原始数据
+                        processed_items.append(item)
+                
+                items = processed_items
             
             # 添加爬取时间
             for item in items:

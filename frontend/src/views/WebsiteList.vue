@@ -37,9 +37,9 @@
           <el-button @click="handleReset">重置</el-button>
         </el-col>
         <el-col :span="6" style="text-align: right">
-          <el-button type="success" @click="showCrawlDialog = true">
+          <el-button type="success" @click="$router.push('/tasks')">
             <el-icon><Plus /></el-icon>
-            新增爬取任务
+            创建任务
           </el-button>
         </el-col>
       </el-row>
@@ -84,6 +84,7 @@
         <el-table-column prop="id" label="ID" width="80" />
         <el-table-column prop="title" label="标题" min-width="200" show-overflow-tooltip />
         <el-table-column prop="domain" label="域名" width="180" />
+        <el-table-column prop="description" label="简介" min-width="250" show-overflow-tooltip />
         <el-table-column prop="status_code" label="状态码" width="100" align="center">
           <template #default="{ row }">
             <el-tag :type="row.status_code === 200 ? 'success' : 'danger'">
@@ -92,7 +93,7 @@
           </template>
         </el-table-column>
         <el-table-column prop="crawl_time" label="爬取时间" width="180" />
-        <el-table-column label="操作" width="200" fixed="right">
+        <el-table-column label="操作" width="280" fixed="right">
           <template #default="{ row }">
             <el-button
               type="primary"
@@ -100,6 +101,13 @@
               @click="handleViewDetail(row)"
             >
               查看详情
+            </el-button>
+            <el-button
+              type="info"
+              size="small"
+              @click="analyzeArticle(row)"
+            >
+              AI分析
             </el-button>
             <el-button
               type="danger"
@@ -128,7 +136,7 @@
     <!-- 详情对话框 -->
     <el-dialog
       v-model="detailDialogVisible"
-      title="网站详情"
+      title="文章详情"
       width="70%"
     >
       <el-descriptions :column="2" border v-if="currentDetail">
@@ -156,35 +164,17 @@
       </el-descriptions>
     </el-dialog>
 
-    <!-- 爬取任务对话框 -->
-    <el-dialog
-      v-model="showCrawlDialog"
-      title="新增爬取任务"
-      width="500px"
-    >
-      <el-form :model="crawlForm" label-width="100px">
-        <el-form-item label="网站URL" required>
-          <el-input
-            v-model="crawlForm.url"
-            placeholder="请输入要爬取的网站URL"
-          />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="showCrawlDialog = false">取消</el-button>
-        <el-button type="primary" @click="handleStartCrawl" :loading="crawlLoading">
-          开始爬取
-        </el-button>
-      </template>
-    </el-dialog>
   </div>
 </template>
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Link, Plus } from '@element-plus/icons-vue'
 import api from '../api/index'
+
+const router = useRouter()
 
 // 搜索表单
 const searchForm = reactive({
@@ -214,12 +204,7 @@ const statistics = ref({
 const detailDialogVisible = ref(false)
 const currentDetail = ref(null)
 
-// 爬取对话框
-const showCrawlDialog = ref(false)
-const crawlForm = reactive({
-  url: ''
-})
-const crawlLoading = ref(false)
+// 创建爬虫功能已合并到任务管理页面
 
 // 获取网站列表
 const fetchWebsiteList = async () => {
@@ -288,6 +273,14 @@ const handleViewDetail = async (row) => {
   }
 }
 
+// AI分析文章
+const analyzeArticle = (row) => {
+  router.push({
+    path: '/analysis',
+    query: { articleId: row.id }
+  })
+}
+
 // 删除
 const handleDelete = async (row) => {
   try {
@@ -305,30 +298,7 @@ const handleDelete = async (row) => {
   }
 }
 
-// 开始爬取
-const handleStartCrawl = async () => {
-  if (!crawlForm.url) {
-    ElMessage.warning('请输入URL')
-    return
-  }
-  
-  crawlLoading.value = true
-  try {
-    await api.post('/crawl', { url: crawlForm.url })
-    ElMessage.success('爬取任务已启动')
-    showCrawlDialog.value = false
-    crawlForm.url = ''
-    // 延迟刷新列表
-    setTimeout(() => {
-      fetchWebsiteList()
-      fetchStatistics()
-    }, 2000)
-  } catch (error) {
-    ElMessage.error('启动爬取任务失败: ' + error.message)
-  } finally {
-    crawlLoading.value = false
-  }
-}
+// 创建爬虫功能已合并到任务管理页面，相关代码已移除
 
 // 初始化
 onMounted(() => {

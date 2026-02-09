@@ -13,7 +13,7 @@ services:
       MYSQL_PASSWORD: ${MYSQL_PASSWORD:-scrapy_pass}
       TZ: Asia/Shanghai
     ports:
-      - "${MYSQL_PORT:-3306}:3306"
+      - "${MYSQL_PORT:-3308}:3306"
     volumes:
       - mysql_data_prod:/var/lib/mysql
       - ./init_db.sql:/docker-entrypoint-initdb.d/init.sql:ro
@@ -45,7 +45,7 @@ services:
       MYSQL_PASSWORD: ${MYSQL_PASSWORD:-scrapy_pass}
       FLASK_ENV: production
     ports:
-      - "${BACKEND_PORT:-5000}:5000"
+      - "${BACKEND_PORT:-6000}:5000"
     volumes:
       - ./scrapy_project:/app/scrapy_project:ro
       - ./backend:/app
@@ -58,7 +58,7 @@ services:
     networks:
       - scrapy_network_prod
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5000/api/statistics"]
+      test: ["CMD", "curl", "-f", "http://localhost:6000/api/statistics"]
       interval: 30s
       timeout: 10s
       retries: 3

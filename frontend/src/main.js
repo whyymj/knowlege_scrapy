@@ -12,6 +12,10 @@ for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
   app.component(key, component)
 }
 
-app.use(ElementPlus)
+// 配置 Element Plus 全局组件大小为 small
+app.use(ElementPlus, {
+  size: 'small'
+})
+
 app.use(router)
 app.mount('#app')

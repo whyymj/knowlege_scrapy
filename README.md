@@ -1,6 +1,6 @@
-# 网站爬虫管理系统
+# 通用抓取信息系统
 
-一个基于 Scrapy + Vue3 + MySQL 的网站信息爬取和管理系统。
+一个配置驱动、插件化、可观测、容错的通用抓取信息系统。支持多种数据源、多种存储后端，通过配置文件即可快速创建抓取任务。
 
 ## 项目结构
 
@@ -47,10 +47,53 @@ scrapy/
 │       ├── tushare_crawler.py
 │       ├── sina_finance_crawler.py
 │       └── xueqiu_crawler.py
+├── pipeline/               # 数据处理管道
+│   ├── normalizer.py       # 数据标准化
+│   ├── quality_monitor.py   # 数据质量监控
+│   └── processor.py        # 数据处理器（整合）
+├── analyzer/               # AI分析模块
+│   ├── deepseek_analyzer.py  # DeepSeek API 集成
+│   └── config.py           # 分析器配置
+├── storage/                # 存储层
+│   ├── base.py            # 存储基类和接口
+│   ├── manager.py         # 统一存储管理器
+│   ├── timeseries.py      # 时序数据库（InfluxDB/TimescaleDB）
+│   ├── vector.py          # 向量数据库（Qdrant/Pinecone）
+│   ├── document.py        # 文档数据库（MongoDB/Elasticsearch）
+│   └── cache.py           # 缓存层（Redis）
+├── engine/                 # 通用抓取引擎
+│   ├── core.py            # 引擎核心
+│   ├── config.py          # 引擎配置
+│   ├── pipeline.py        # 抽象抓取管道
+│   ├── registry.py        # 组件注册表
+│   ├── observability.py   # 可观测性管理
+│   └── fault_tolerance.py # 容错恢复管理
+├── components/             # 可插拔组件层
+│   ├── base.py            # 组件基类
+│   ├── adapters.py        # 源适配器（HTTP/API）
+│   ├── parsers.py         # 解析器（HTML/JSON）
+│   ├── extractors.py      # 提取器（CSS/XPath/Regex）
+│   ├── transformers.py   # 转换器（数据转换/标准化）
+│   ├── outputs.py         # 输出器（数据库/文件）
+│   └── validators.py      # 验证器（数据验证/质量检查）
+├── ai_recommender/         # AI推荐模块
+│   ├── recommender.py     # AI推荐器主类
+│   ├── topic_recommender.py  # 主题推荐器
+│   ├── article_analyzer.py   # 文章分析器
+│   ├── selector.py        # 手动选择器
+│   └── service.py         # 推荐服务（整合）
 ├── examples/               # 示例代码
-│   └── run_crawlers.py     # 爬虫使用示例
+│   ├── run_crawlers.py     # 爬虫使用示例
+│   ├── test_pipeline.py    # 数据处理管道测试
+│   ├── test_analyzer.py    # DeepSeek分析器测试
+│   ├── test_storage.py     # 存储层测试
+│   ├── test_engine.py     # 通用抓取引擎测试
+│   └── test_ai_recommender.py  # AI推荐功能测试
 ├── docs/                   # 文档
-│   └── 爬虫系统说明.md
+│   ├── 爬虫系统说明.md
+│   ├── 数据处理管道说明.md
+│   ├── DeepSeek分析器说明.md
+│   └── 存储层说明.md
 ├── init_db.sql             # 数据库初始化脚本
 └── requirements.txt        # Python 依赖
 ```
@@ -60,7 +103,8 @@ scrapy/
 ### 本地开发环境
 - Python 3.8+
 - Node.js 16+
-- MySQL 5.7+ (端口 3306)
+- pnpm（前端包管理器）
+- Docker（用于 MySQL 容器，脚本会自动创建）
 
 ### Docker 部署环境
 - Docker 20.10+
@@ -70,9 +114,54 @@ scrapy/
 
 ### 1. 安装 Python 依赖
 
+**方式一：使用安装脚本（推荐）**
+
+```bash
+./scripts/install_deps.sh
+```
+
+**方式二：手动安装**
+
+```bash
+# 安装项目依赖（包含 Scrapy）
+pip install -r requirements.txt
+
+# 安装后端依赖（包含 Flask）
+pip install -r backend/requirements.txt
+```
+
+**方式三：配置 pip 镜像源（推荐，一次配置永久使用）**
+
+项目已包含 `pip.conf.example` 配置文件示例。安装脚本会自动配置镜像源，也可以手动配置：
+
+**Linux/Mac:**
+```bash
+mkdir -p ~/.pip
+cp pip.conf.example ~/.pip/pip.conf
+```
+
+**Windows:**
+```bash
+# 创建目录（如果不存在）
+mkdir %APPDATA%\pip
+# 复制配置文件
+copy pip.conf.example %APPDATA%\pip\pip.ini
+```
+
+配置完成后，直接使用 `pip install` 即可自动使用国内镜像源：
+
 ```bash
 pip install -r requirements.txt
 pip install -r backend/requirements.txt
+```
+
+**方式四：临时使用镜像源**
+
+如果不想配置，也可以临时指定镜像源：
+
+```bash
+pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
+pip install -r backend/requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
 ```
 
 ### 2. 配置项目
@@ -86,9 +175,10 @@ pip install -r backend/requirements.txt
 - **database**: MySQL 数据库配置（host, port, db, user, password）
 - **backend**: 后端服务配置（host, port, debug, cors_enabled）
 - **frontend**: 前端服务配置（port, api_proxy）
-- **scrapy**: Scrapy 爬虫配置（download_delay, concurrent_requests, user_agent 等）
-- **docker**: Docker 部署配置（MySQL 密码、端口等）
-- **logging**: 日志配置（level, format）
+- **engine**: 通用抓取引擎配置（并发数、可观测性、容错等）
+- **storage**: 存储层配置（MySQL、MongoDB、Redis等）
+- **pipeline**: 数据处理管道配置（质量监控阈值、标准化选项等）
+- **analyzer**: AI分析器配置（DeepSeek API密钥、缓存、批处理等）
 
 #### 配置优先级
 
@@ -105,7 +195,7 @@ pip install -r backend/requirements.txt
 {
   "database": {
     "host": "localhost",
-    "port": 3306,
+    "port": 3308,
     "db": "scrapy_db",
     "user": "your_user",
     "password": "your_password"
@@ -131,7 +221,15 @@ mysql -u root -p < init_db.sql
 
 ```bash
 cd frontend
-npm install
+
+# 安装 pnpm（如果未安装）
+npm install -g pnpm --registry=https://registry.npmmirror.com
+
+# 配置 pnpm 使用国内镜像源
+pnpm config set registry https://registry.npmmirror.com
+
+# 安装依赖
+pnpm install
 ```
 
 ## 使用方法
@@ -150,8 +248,8 @@ docker-compose up -d --build
 
 访问服务：
 - 前端界面: http://localhost:3000
-- 后端 API: http://localhost:5000
-- MySQL: localhost:3306
+- 后端 API: http://localhost:6000
+- MySQL: localhost:3308
 
 常用命令：
 ```bash
@@ -196,11 +294,19 @@ docker-compose -f docker-compose.prod.yml up -d --build
 ```
 
 脚本会自动：
-- 检查必要的依赖和工具
-- 检查 MySQL 服务状态
-- 检查端口占用情况
-- 启动后端服务（端口 5000）
-- 启动前端服务（端口 3000）
+- ✅ 检查必要的依赖和工具（Python、Node.js、Docker）
+- ✅ **自动创建 MySQL Docker 容器**（如果不存在）
+- ✅ **自动启动 MySQL 容器**（如果已停止）
+- ✅ 检查端口占用情况（6000, 3000）
+- ✅ 自动安装前端依赖（如未安装）
+- ✅ 启动后端服务（端口 6000）
+- ✅ 启动前端服务（端口 3000）
+
+**MySQL 容器管理**：
+- 容器名称：`scrapy_mysql_local`
+- 端口：`3308:3306`
+- 自动重启：系统重启后自动启动
+- 手动管理：`./scripts/manage_mysql.sh {create|start|stop|restart|status|remove}`
 
 停止所有服务：
 
@@ -217,13 +323,13 @@ cd backend
 python app.py
 ```
 
-后端服务将在 `http://localhost:5000` 启动
+后端服务将在 `http://localhost:6000` 启动
 
 #### 2. 启动前端服务
 
 ```bash
 cd frontend
-npm run dev
+pnpm run dev
 ```
 
 前端服务将在 `http://localhost:3000` 启动
@@ -258,7 +364,9 @@ python
 >>> results = manager.run_stock_crawlers()  # 运行股市爬虫
 ```
 
-详细说明请参考：[爬虫系统说明文档](docs/爬虫系统说明.md)
+详细说明请参考：
+- [爬虫系统说明文档](docs/爬虫系统说明.md)
+- [数据处理管道说明文档](docs/数据处理管道说明.md)
 
 ## 功能特性
 
@@ -285,23 +393,185 @@ python
 - ✅ **数据去重**: 支持URL/标题/内容哈希去重
 - ✅ **定时调度**: 自动按频率运行爬虫
 
+### 数据处理管道（Pipeline）
+
+#### 数据标准化（DataNormalizer）
+- ✅ **文本清洗**: 去除HTML标签、标准化编码
+- ✅ **结构化提取**: 标题、正文、发布时间、来源统一提取
+- ✅ **情感标签预标注**: 基于关键词的情感分析
+- ✅ **关键实体识别**: 公司、技术、人物实体提取
+
+#### 数据质量监控（DataQualityMonitor）
+- ✅ **完整性检查**: 必需字段、内容长度验证
+- ✅ **时效性验证**: 发布时间解析、数据年龄检查
+- ✅ **重复检测**: 内容哈希、URL哈希、相似度检测
+- ✅ **异常值检测**: 可疑模式、异常长度、时间异常检测
+
+### AI分析模块（Analyzer）
+
+#### DeepSeek API 集成
+- ✅ **多维度分析**: 技术趋势、市场情绪、关联性分析
+- ✅ **请求合并**: 自动合并相似内容批量分析
+- ✅ **缓存机制**: 内存缓存，避免重复分析
+- ✅ **异步处理**: 支持异步批量分析，提高吞吐量
+- ✅ **错误处理**: 自动重试、降级策略
+
+### 存储层（Storage）
+
+#### 多数据库支持
+- ✅ **时序数据库**: InfluxDB / TimescaleDB（股价、交易量等时间序列数据）
+- ✅ **向量数据库**: Qdrant / Pinecone（AI论文/新闻语义检索）
+- ✅ **关系数据库**: MySQL / PostgreSQL（结构化数据）
+- ✅ **文档数据库**: MongoDB / Elasticsearch（非结构化文本、分析结果）
+- ✅ **缓存层**: Redis（热点数据、会话状态）
+- ✅ **统一管理**: StorageManager 统一管理所有存储
+
+### 通用抓取引擎（Crawler Engine）
+
+#### 核心特性
+- ✅ **配置驱动**: 通过配置文件定义抓取任务，无需修改代码
+- ✅ **插件化**: 支持自定义插件扩展功能
+- ✅ **可观测性**: 完整的日志、指标、追踪系统
+- ✅ **容错恢复**: 自动重试、降级、故障转移
+
+#### 抽象抓取管道
+- ✅ **请求生成**: 根据配置生成抓取请求
+- ✅ **页面获取**: 下载页面内容
+- ✅ **内容解析**: 解析HTML/JSON等格式
+- ✅ **数据提取**: 提取结构化数据
+- ✅ **数据清洗**: 清洗和标准化数据
+- ✅ **结果输出**: 输出到目标存储
+
+#### 可插拔组件层
+- ✅ **源适配器**: HTTP适配器、API适配器
+- ✅ **解析器**: HTML解析器、JSON解析器
+- ✅ **提取器**: CSS选择器、XPath、正则表达式
+- ✅ **转换器**: 数据格式转换、标准化
+- ✅ **输出器**: 数据库输出、文件输出
+- ✅ **验证器**: 数据完整性验证、质量检查
+
+### AI推荐模块（AI Recommender）
+
+#### LangChain集成
+- ✅ **主题推荐**: 智能分析文章内容，推荐相关主题
+- ✅ **文章分析**: 深度分析文章，提取摘要、关键要点、情感倾向等
+- ✅ **手动选择**: 支持手动选择主题和文章，记录选择历史
+- ✅ **推荐流程**: 完整的推荐流程，整合所有功能
+- ✅ **多提供商支持**: 支持OpenAI、DeepSeek等LLM提供商
+
 ### Web管理系统
 
-- ✅ 网站信息爬取（标题、描述、内容、关键词等）
-- ✅ MySQL 数据存储
-- ✅ Web 管理界面
-- ✅ 数据搜索和筛选
-- ✅ 统计信息展示
-- ✅ 数据详情查看
-- ✅ 数据删除功能
+- ✅ **现代化界面**: 侧边栏导航，清晰的模块划分
+- ✅ **仪表盘**: 系统概览、统计信息、快速操作
+- ✅ **网站列表**: 数据查看、搜索筛选、批量操作
+- ✅ **AI主题推荐**: 智能推荐、主题卡片、手动选择
+- ✅ **文章分析**: AI深度分析、结果可视化展示
+- ✅ **任务管理**: 任务创建、状态监控、日志查看
+- ✅ **智能推荐组件**: 实时推荐、快速跳转
+- ✅ **响应式设计**: 适配不同屏幕尺寸
 
 ## API 接口
 
-- `GET /api/websites` - 获取网站列表（支持分页、搜索、筛选）
-- `GET /api/websites/:id` - 获取网站详情
-- `DELETE /api/websites/:id` - 删除网站记录
+### 任务管理
+- `GET /api/tasks` - 获取任务列表（支持分页、状态筛选）
+- `GET /api/tasks/:task_id` - 获取任务详情
+- `POST /api/tasks` - 创建并启动抓取任务
+- `GET /api/tasks/:task_id/data` - 获取任务数据
+- `GET /api/tasks/:task_id/logs` - 获取任务日志
+
+### 系统信息
+- `GET /api/health` - 健康检查
 - `GET /api/statistics` - 获取统计信息
-- `POST /api/crawl` - 启动爬取任务
+
+### AI推荐接口
+- `POST /api/ai/recommend/topics` - AI主题推荐
+- `POST /api/ai/analyze/article` - 分析文章细节
+- `POST /api/ai/select/topics` - 手动选择主题
+- `POST /api/ai/select/articles` - 手动选择文章
+- `GET /api/ai/selections/:user_id` - 获取用户选择记录
+- `POST /api/ai/recommend/pipeline` - 完整推荐流程
+
+## 快速开始
+
+### 1. 安装依赖
+
+```bash
+# Python依赖
+pip install -r requirements.txt
+
+# 前端依赖
+cd frontend && pnpm install
+```
+
+### 2. 配置数据库
+
+```bash
+# 使用Docker启动MySQL
+docker run -d \
+  --name scrapy_mysql_local \
+  -e MYSQL_ROOT_PASSWORD=root123456 \
+  -e MYSQL_DATABASE=scrapy_db \
+  -p 3308:3306 \
+  mysql:8.0
+
+# 初始化数据库
+mysql -h localhost -P 3308 -u root -proot123456 < init_db.sql
+```
+
+### 3. 配置系统
+
+```bash
+# 复制配置示例
+cp config.json.example config.json
+
+# 编辑配置
+vim config.json
+```
+
+### 4. 启动服务
+
+```bash
+# 一键启动（推荐）
+./dev.sh
+
+# 或手动启动
+# 后端
+cd backend && python app.py
+
+# 前端（另一个终端）
+cd frontend && pnpm run dev
+```
+
+### 5. 创建抓取任务
+
+通过API创建任务：
+
+```bash
+curl -X POST http://localhost:6000/api/tasks \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": "my_task",
+    "name": "示例任务",
+    "source": {
+      "type": "http",
+      "urls": ["https://example.com"]
+    },
+    "parser": {"type": "html"},
+    "extractor": {
+      "type": "css",
+      "fields": {
+        "container": "article",
+        "fields": {
+          "title": {"selector": "h1", "attr": "text"}
+        }
+      }
+    },
+    "output": {
+      "type": "database",
+      "output_type": "mysql"
+    }
+  }'
+```
 
 ## Docker 配置说明
 
@@ -318,8 +588,8 @@ python
 - `MYSQL_ROOT_PASSWORD`: MySQL root 密码（默认: root123456）
 - `MYSQL_USER`: MySQL 用户（默认: scrapy_user）
 - `MYSQL_PASSWORD`: MySQL 密码（默认: scrapy_pass）
-- `MYSQL_PORT`: MySQL 端口（默认: 3306）
-- `BACKEND_PORT`: 后端端口（默认: 5000）
+- `MYSQL_PORT`: MySQL 端口（默认: 3308）
+- `BACKEND_PORT`: 后端端口（默认: 6000）
 - `FRONTEND_PORT`: 前端端口（默认: 3000）
 
 ### 数据持久化

@@ -1,0 +1,6 @@
+# pnpm 配置 - 使用国内镜像源
+registry=https://registry.npmmirror.com
+
+# 其他配置
+auto-install-peers=true
+strict-peer-dependencies=false
